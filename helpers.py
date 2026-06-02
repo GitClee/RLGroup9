@@ -101,7 +101,7 @@ class MonteCarlo:
         else: self.gamma = gamma
 
     def get_state_values(self):
-        return self.state_values
+        return self.state_values.copy()
 
 class ZeroPointTemporalDifference:
 
@@ -146,7 +146,7 @@ class ZeroPointTemporalDifference:
         else: self.gamma = gamma
 
     def get_state_values(self):
-        return self.state_values
+        return self.state_values.copy()
 
 
 
