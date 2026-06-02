@@ -30,6 +30,9 @@ class RandomWalk():
     def in_terminal(self):
         return self.current_state in (MRPState.LEFT_TERM, MRPState.RIGHT_TERM)
 
+    def get_current_state(self):
+        return self.current_state
+
     def reset(self):
         self.current_state = MRPState.C
 
@@ -37,7 +40,7 @@ class RandomWalk():
 def generate_episode():
     random_walk = RandomWalk()
 
-    state = random_walk.current_state
+    state = random_walk.get_current_state()
 
     episode = []
 
@@ -49,7 +52,7 @@ def generate_episode():
     return episode, state
 
 # implements every visit Monte Carlo
-class MonteCarlo():
+class MonteCarlo:
 
     def __init__(self):
         self.state_values = {
@@ -89,16 +92,66 @@ class MonteCarlo():
 
     # set step_size alpha
     def set_alpha(self, alpha):
-        if alpha <= 0: raise ValueError("Alpha must be greater than 0")
-        elif alpha > 1:  self.alpha = 1
+        if not (0 < alpha <= 1): raise ValueError("Alpha must be in (0,1]")
         else: self.alpha = alpha
 
     # set gamma to enable discounting
     def set_gamma(self, gamma):
-        if gamma <= 0: self.gamma = 0
-        elif gamma > 1:  self.gamma = 1
+        if not (0 <= gamma <= 1): raise ValueError("Gamma must be in [0,1]")
         else: self.gamma = gamma
 
     def get_state_values(self):
         return self.state_values
+
+class ZeroPointTemporalDifference:
+
+    def __init__(self):
+        self.state_values = {
+            MRPState.A: 0.5,
+            MRPState.B: 0.5,
+            MRPState.C: 0.5,
+            MRPState.D: 0.5,
+            MRPState.E: 0.5
+        }
+        self.alpha = 0.1
+        self.gamma = 1
+        self.random_walk = RandomWalk()
+
+    def run_episodes(self, amount=1):
+
+        for m in range(amount):
+
+            current_state = MRPState.C
+
+            while not self.random_walk.in_terminal():
+                next_state, reward = self.random_walk.step()
+                if self.random_walk.in_terminal():
+                    error = reward - self.state_values[current_state]
+                else:
+                    error = reward + self.gamma*self.state_values[next_state] - self.state_values[current_state]
+                self.state_values[current_state] += self.alpha * error
+                current_state = next_state
+            self.random_walk.reset()
+
+    # set step_size alpha
+    def set_alpha(self, alpha):
+        if not (0 < alpha <= 1):
+            raise ValueError("Alpha must be in (0,1]")
+        else:
+            self.alpha = alpha
+
+    # set gamma to enable discounting
+    def set_gamma(self, gamma):
+        if not (0 <= gamma <= 1): raise ValueError("Gamma must be in [0,1]")
+        else: self.gamma = gamma
+
+    def get_state_values(self):
+        return self.state_values
+
+
+
+
+
+
+
 
