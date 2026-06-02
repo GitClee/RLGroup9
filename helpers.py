@@ -47,3 +47,58 @@ def generate_episode():
         state = next_state
 
     return episode, state
+
+# implements every visit Monte Carlo
+class MonteCarlo():
+
+    def __init__(self):
+        self.state_values = {
+            MRPState.A: 0.5,
+            MRPState.B: 0.5,
+            MRPState.C: 0.5,
+            MRPState.D: 0.5,
+            MRPState.E: 0.5,
+            }
+        self.alpha = 0.1
+        self.gamma = 1 # no discounting
+
+
+    def run_episodes(self, amount=1):
+        for m in range(amount):
+            episode, last_state = generate_episode()
+
+            returns = self.get_returns(episode)
+
+            for i in range(len(episode)):
+                state = episode[i][0]
+
+                self.state_values[state]  += self.alpha * (returns[i] - self.state_values[state])
+
+    # calculate the returns for each state in episode
+    def get_returns(self, episode):
+        returns = []
+
+        for i in range(len(episode)):
+            val = 0
+            for j in range(i, len(episode)):
+                val += self.gamma**(j-i) * episode[j][1]
+
+            returns.append(val)
+
+        return returns
+
+    # set step_size alpha
+    def set_alpha(self, alpha):
+        if alpha <= 0: raise ValueError("Alpha must be greater than 0")
+        elif alpha > 1:  self.alpha = 1
+        else: self.alpha = alpha
+
+    # set gamma to enable discounting
+    def set_gamma(self, gamma):
+        if gamma <= 0: self.gamma = 0
+        elif gamma > 1:  self.gamma = 1
+        else: self.gamma = gamma
+
+    def get_state_values(self):
+        return self.state_values
+
