@@ -1,5 +1,7 @@
 from enum import IntEnum
 import random
+import numpy as np
+import math
 
 class MRPState(IntEnum):
     LEFT_TERM = 0
@@ -103,6 +105,15 @@ class MonteCarlo:
     def get_state_values(self):
         return self.state_values.copy()
 
+    def reset(self):
+        self.state_values =  {
+            MRPState.A: 0.5,
+            MRPState.B: 0.5,
+            MRPState.C: 0.5,
+            MRPState.D: 0.5,
+            MRPState.E: 0.5,
+            }
+
 class ZeroPointTemporalDifference:
 
     def __init__(self):
@@ -147,6 +158,49 @@ class ZeroPointTemporalDifference:
 
     def get_state_values(self):
         return self.state_values.copy()
+
+    def reset(self):
+        self.state_values =  {
+            MRPState.A: 0.5,
+            MRPState.B: 0.5,
+            MRPState.C: 0.5,
+            MRPState.D: 0.5,
+            MRPState.E: 0.5,
+            }
+
+
+def rms_error(real_values, obs_values):
+
+    if len(real_values) != len(obs_values): raise ValueError("Lists must have same length")
+    n = len(real_values)
+
+    errors_squared = np.subtract(real_values, obs_values)**2
+
+    rms = math.sqrt(sum(errors_squared)/n)
+
+    return rms
+
+def get_rms_over_episodes(method, max_episodes, runs):
+    rms_errors = []
+    real_values = (1/6, 2/6, 3/6, 4/6, 5/6)
+    for i in range(runs):
+        run = []
+        for j in range(max_episodes):
+            method.run_episodes()
+            vals = method.get_state_values()
+            run.append(rms_error(real_values, list(vals.values())))
+        rms_errors.append(run)
+        method.reset()
+
+    rms_errors = np.mean(rms_errors, axis=0)
+
+    return range(max_episodes), rms_errors
+
+
+
+
+
+
 
 
 
