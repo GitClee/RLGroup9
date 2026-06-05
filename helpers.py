@@ -114,7 +114,7 @@ class MonteCarlo:
             MRPState.E: 0.5,
             }
 
-class ZeroPointTemporalDifference:
+class OneStepTemporalDifference:
 
     def __init__(self):
         self.state_values = {
