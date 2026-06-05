@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reinforcement Learning: MC & TD(0) MRP Dashboard</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* CSS custom properties for modern dark glassmorphism system */
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-gradient: radial-gradient(circle at 50% 0%, #17233f 0%, #0b0f19 70%);
+            --card-bg: rgba(20, 28, 48, 0.65);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --font-outfit: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            
+            /* Curated HSL Palette */
+            --color-text-primary: #f8fafc;
+            --color-text-secondary: #94a3b8;
+            --color-accent-blue: #3b82f6;
+            --color-accent-blue-rgb: 59, 130, 246;
+            --color-accent-cyan: #06b6d4;
+            --color-accent-cyan-rgb: 6, 182, 212;
+            --color-accent-purple: #a855f7;
+            --color-accent-purple-rgb: 168, 85, 247;
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-danger: #ef4444;
+        }
+
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: var(--font-inter);
+            background: var(--bg-primary);
+            background-image: var(--bg-gradient);
+            color: var(--color-text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding: 2rem 1rem;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Header Styling */
+        header {
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-family: var(--font-outfit);
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 30%, var(--color-accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            color: var(--color-text-secondary);
+            font-size: 1.05rem;
+            font-weight: 400;
+            max-width: 750px;
+            margin: 0 auto;
+        }
+
+        /* Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 1.75rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card System (Glassmorphic) */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            padding: 1.5rem;
+            margin-bottom: 1.75rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 12px 40px 0 rgba(6, 182, 212, 0.08);
+        }
+
+        .card-title {
+            font-family: var(--font-outfit);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--color-accent-cyan);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.75rem;
+        }
+
+        /* Form Controls */
+        .control-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .control-value {
+            font-family: var(--font-outfit);
+            font-weight: 700;
+            color: var(--color-text-primary);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        /* Premium Sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            transition: background 0.3s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--color-accent-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+            background: #22d3ee;
+        }
+
+        /* Buttons & Actions */
+        .btn-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            font-family: var(--font-outfit);
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-accent-cyan) 0%, var(--color-accent-blue) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.45);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--color-text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        /* Simulation Status Panel */
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        .status-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        .status-item span {
+            color: var(--color-text-secondary);
+        }
+
+        .status-val {
+            font-family: var(--font-outfit);
+            font-weight: 700;
+        }
+
+        .status-val.td {
+            color: var(--color-accent-purple);
+        }
+
+        .status-val.mc {
+            color: var(--color-accent-cyan);
+        }
+
+        /* Visualizer Container */
+        .visualizer-card {
+            overflow-x: auto;
+        }
+
+        .mrp-chain {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-width: 600px;
+            padding: 1.5rem 1rem;
+            position: relative;
+        }
+
+        /* Background connection line */
+        .mrp-chain::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 2rem;
+            right: 2rem;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            z-index: 1;
+            transform: translateY(-50%);
+        }
+
+        .mrp-node {
+            position: relative;
+            z-index: 2;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .mrp-node.terminal {
+            border-color: var(--color-warning);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .mrp-node.active {
+            border-color: var(--color-accent-cyan);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+            transform: scale(1.1);
+        }
+
+        .mrp-node.active-walk {
+            border-color: var(--color-danger);
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.7);
+            transform: scale(1.15);
+        }
+
+        .node-name {
+            font-family: var(--font-outfit);
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .node-val {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            margin-top: 0.15rem;
+        }
+
+        /* Charts Layout */
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1200px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-box {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+
+        /* Tab Buttons */
+        .tab-bar {
+            display: flex;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 0.3rem;
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 6px;
+            color: var(--color-text-secondary);
+            font-family: var(--font-outfit);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--color-text-primary);
+        }
+
+        /* Math and Info Section */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-card h3 {
+            font-family: var(--font-outfit);
+            color: var(--color-accent-cyan);
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .info-card p {
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .math-block {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            border-left: 3px solid var(--color-accent-cyan);
+            margin-top: 0.5rem;
+            color: #e2e8f0;
+        }
+
+        /* Animation overlay controls */
+        .walk-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 1rem;
+        }
+
+        .walk-badge {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--color-danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 20px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: none;
+            align-items: center;
+            gap: 0.35rem;
+            margin: 0.5rem auto 0 auto;
+            width: fit-content;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Markov Reward Process Simulator</h1>
+            <p>Interactive dashboard comparing the estimation behaviors of Every-Visit Monte Carlo (MC) and Temporal Difference (TD(0)) on a 1D Random Walk environment.</p>
+        </header>
+
+        <main class="dashboard-grid">
+            <!-- Left Side: Control Panel -->
+            <aside>
+                <div class="card">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Hyperparameters
+                    </div>
+                    
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Step Size (&alpha;)</span>
+                            <span class="control-value" id="alpha-val">0.10</span>
+                        </div>
+                        <input type="range" id="alpha-slider" min="0.01" max="1.0" step="0.01" value="0.10">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Discount Factor (&gamma;)</span>
+                            <span class="control-value" id="gamma-val">1.00</span>
+                        </div>
+                        <input type="range" id="gamma-slider" min="0.00" max="1.0" step="0.05" value="1.00">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Episodes (RMS Chart)</span>
+                            <span class="control-value" id="episodes-val">100</span>
+                        </div>
+                        <input type="range" id="episodes-slider" min="1" max="100" step="1" value="100">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Runs (RMS Chart)</span>
+                            <span class="control-value" id="runs-val">100</span>
+                        </div>
+                        <input type="range" id="runs-slider" min="1" max="100" step="1" value="100">
+                    </div>
+
+                    <div class="btn-container">
+                        <button class="btn btn-secondary" id="btn-reset">Reset</button>
+                        <button class="btn btn-primary" id="btn-run">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            Simulate
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        Metrics Summary
+                    </div>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span>Simulation CPU Time</span>
+                            <span class="status-val" id="cpu-time">0 ms</span>
+                        </div>
+                        <div class="status-item">
+                            <span>TD(0) Final RMS Error</span>
+                            <span class="status-val td" id="td-final-rms">0.0000</span>
+                        </div>
+                        <div class="status-item">
+                            <span>MC Final RMS Error</span>
+                            <span class="status-val mc" id="mc-final-rms">0.0000</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right Side: Visualizations -->
+            <section style="width: 100%;">
+                <!-- State visualizer node row -->
+                <div class="card visualizer-card">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"></circle><circle cx="5" cy="19" r="3"></circle><circle cx="19" cy="19" r="3"></circle><line x1="5" y1="16" x2="9.5" y2="8"></line><line x1="19" y1="16" x2="14.5" y2="8"></line></svg>
+                        Markov Reward Process (Random Walk Chain)
+                    </div>
+                    
+                    <div class="mrp-chain" id="chain-container">
+                        <div class="mrp-node terminal" id="node-0">
+                            <span class="node-name">L-Term</span>
+                            <span class="node-val">0.00</span>
+                        </div>
+                        <div class="mrp-node" id="node-1">
+                            <span class="node-name">State A</span>
+                            <span class="node-val">0.50</span>
+                        </div>
+                        <div class="mrp-node" id="node-2">
+                            <span class="node-name">State B</span>
+                            <span class="node-val">0.50</span>
+                        </div>
+                        <div class="mrp-node active" id="node-3">
+                            <span class="node-name">State C</span>
+                            <span class="node-val">0.50</span>
+                        </div>
+                        <div class="mrp-node" id="node-4">
+                            <span class="node-name">State D</span>
+                            <span class="node-val">0.50</span>
+                        </div>
+                        <div class="mrp-node" id="node-5">
+                            <span class="node-name">State E</span>
+                            <span class="node-val">0.50</span>
+                        </div>
+                        <div class="mrp-node terminal" id="node-6">
+                            <span class="node-name">R-Term</span>
+                            <span class="node-val">1.00</span>
+                        </div>
+                    </div>
+
+                    <div class="walk-badge pulse" id="walk-status">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        Walking: Reward +0
+                    </div>
+
+                    <div class="walk-controls">
+                        <button class="btn btn-secondary" id="btn-walk-step" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                            Step Walk
+                        </button>
+                        <button class="btn btn-primary" id="btn-walk-reset" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.08); color: white; border: 1px solid rgba(255,255,255,0.1); box-shadow: none;">
+                            Reset Walk
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Graphs Container -->
+                <div class="charts-container">
+                    <!-- Graph 1: Estimations -->
+                    <div class="card">
+                        <div class="card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path></svg>
+                            Value Function Approximations
+                        </div>
+                        <div class="tab-bar">
+                            <button class="tab-btn active" id="tab-mc">Monte Carlo</button>
+                            <button class="tab-btn" id="tab-td">TD(0)</button>
+                        </div>
+                        <div class="chart-box">
+                            <canvas id="estimationChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Graph 2: RMS Error -->
+                    <div class="card">
+                        <div class="card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg>
+                            Empirical RMS Error over Episodes
+                        </div>
+                        <div style="height: 38px;"></div> <!-- visual spacing matching the tab bar -->
+                        <div class="chart-box">
+                            <canvas id="rmsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mathematical Info Grid -->
+                <div class="info-grid">
+                    <div class="card info-card">
+                        <h3>Monte Carlo (Every-Visit)</h3>
+                        <p>MC updates state values only at the end of an episode using the complete return $G_t$ calculated from that point forward. It does not bootstrap.</p>
+                        <div class="math-block">
+                            G_t = R_{t+1} + &gamma; R_{t+2} + &gamma;&sup2; R_{t+3} + ...<br>
+                            V(S_t) &larr; V(S_t) + &alpha; [G_t - V(S_t)]
+                        </div>
+                    </div>
+
+                    <div class="card info-card">
+                        <h3>Temporal Difference (TD(0))</h3>
+                        <p>TD(0) updates state values at each transition using the immediate reward and the discounted estimated value of the next state (bootstrapping).</p>
+                        <div class="math-block">
+                            Target = R_{t+1} + &gamma; V(S_{t+1})<br>
+                            V(S_t) &larr; V(S_t) + &alpha; [Target - V(S_t)]
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Simulation Code -->
+    <script>
+        // --- Environment Definition ---
+        const MRPState = {
+            LEFT_TERM: 0,
+            A: 1,
+            B: 2,
+            C: 3,
+            D: 4,
+            E: 5,
+            RIGHT_TERM: 6
+        };
+
+        class RandomWalk {
+            constructor() {
+                this.currentState = MRPState.C;
+            }
+
+            step() {
+                if (this.inTerminal()) {
+                    throw new Error("Terminal state already reached");
+                }
+                const move = Math.random() < 0.5 ? -1 : 1;
+                this.currentState = this.currentState + move;
+                const reward = this.currentState === MRPState.RIGHT_TERM ? 1 : 0;
+                return { nextState: this.currentState, reward };
+            }
+
+            inTerminal() {
+                return this.currentState === MRPState.LEFT_TERM || this.currentState === MRPState.RIGHT_TERM;
+            }
+
+            getCurrentState() {
+                return this.currentState;
+            }
+
+            reset() {
+                this.currentState = MRPState.C;
+            }
+        }
+
+        function generateEpisode() {
+            const randomWalk = new RandomWalk();
+            let state = randomWalk.getCurrentState();
+            const episode = [];
+            while (!randomWalk.inTerminal()) {
+                const { nextState, reward } = randomWalk.step();
+                episode.push({ state, reward });
+                state = nextState;
+            }
+            return { episode, lastState: state };
+        }
+
+        // --- Monte Carlo Engine ---
+        class MonteCarlo {
+            constructor(alpha = 0.1, gamma = 1.0) {
+                this.alpha = alpha;
+                this.gamma = gamma;
+                this.reset();
+            }
+
+            reset() {
+                this.stateValues = {
+                    [MRPState.A]: 0.5,
+                    [MRPState.B]: 0.5,
+                    [MRPState.C]: 0.5,
+                    [MRPState.D]: 0.5,
+                    [MRPState.E]: 0.5
+                };
+            }
+
+            runEpisodes(amount = 1) {
+                for (let m = 0; m < amount; m++) {
+                    const { episode } = generateEpisode();
+                    const returns = this.getReturns(episode);
+                    for (let i = 0; i < episode.length; i++) {
+                        const state = episode[i].state;
+                        this.stateValues[state] += this.alpha * (returns[i] - this.stateValues[state]);
+                    }
+                }
+            }
+
+            getReturns(episode) {
+                const returns = [];
+                for (let i = 0; i < episode.length; i++) {
+                    let val = 0;
+                    for (let j = i; j < episode.length; j++) {
+                        val += Math.pow(this.gamma, j - i) * episode[j].reward;
+                    }
+                    returns.push(val);
+                }
+                return returns;
+            }
+
+            getStateValues() {
+                return { ...this.stateValues };
+            }
+        }
+
+        // --- Temporal Difference Engine ---
+        class ZeroPointTemporalDifference {
+            constructor(alpha = 0.1, gamma = 1.0) {
+                this.alpha = alpha;
+                this.gamma = gamma;
+                this.randomWalk = new RandomWalk();
+                this.reset();
+            }
+
+            reset() {
+                this.stateValues = {
+                    [MRPState.A]: 0.5,
+                    [MRPState.B]: 0.5,
+                    [MRPState.C]: 0.5,
+                    [MRPState.D]: 0.5,
+                    [MRPState.E]: 0.5
+                };
+                this.randomWalk.reset();
+            }
+
+            runEpisodes(amount = 1) {
+                for (let m = 0; m < amount; m++) {
+                    let currentState = MRPState.C;
+                    while (!this.randomWalk.inTerminal()) {
+                        const { nextState, reward } = this.randomWalk.step();
+                        let error;
+                        if (this.randomWalk.inTerminal()) {
+                            error = reward - this.stateValues[currentState];
+                        } else {
+                            error = reward + this.gamma * this.stateValues[nextState] - this.stateValues[currentState];
+                        }
+                        this.stateValues[currentState] += this.alpha * error;
+                        currentState = nextState;
+                    }
+                    this.randomWalk.reset();
+                }
+            }
+
+            getStateValues() {
+                return { ...this.stateValues };
+            }
+        }
+
+        function rmsError(realValues, obsValues) {
+            let sumSq = 0;
+            for (let i = 0; i < realValues.length; i++) {
+                sumSq += Math.pow(realValues[i] - obsValues[i], 2);
+            }
+            return Math.sqrt(sumSq / realValues.length);
+        }
+
+        // --- Global States and charts references ---
+        let config = {
+            alpha: 0.1,
+            gamma: 1.0,
+            episodes: 100,
+            runs: 100,
+            activeTab: 'mc' // 'mc' or 'td'
+        };
+
+        let estimationChart = null;
+        let rmsChart = null;
+        let walkSim = new RandomWalk();
+        let walkTimer = null;
+
+        // True State Values
+        const realValues = [1/6, 2/6, 3/6, 4/6, 5/6];
+        const stateKeys = [MRPState.A, MRPState.B, MRPState.C, MRPState.D, MRPState.E];
+
+        // --- Core Simulation Runners ---
+        function runSimulations() {
+            const startCpu = performance.now();
+
+            const mcInstance = new MonteCarlo(config.alpha, config.gamma);
+            const tdInstance = new ZeroPointTemporalDifference(config.alpha, config.gamma);
+
+            // 1. Get value function checkpoints (0, 1, 10, 100 episodes) on a single run
+            const mcCheckpoints = [];
+            const tdCheckpoints = [];
+
+            // Checkpoint 0
+            mcCheckpoints.push(mcInstance.getStateValues());
+            tdCheckpoints.push(tdInstance.getStateValues());
+
+            // Checkpoint 1 (Run 1 episode)
+            mcInstance.runEpisodes(1);
+            tdInstance.runEpisodes(1);
+            mcCheckpoints.push(mcInstance.getStateValues());
+            tdCheckpoints.push(tdInstance.getStateValues());
+
+            // Checkpoint 10 (Run 9 more episodes)
+            mcInstance.runEpisodes(9);
+            tdInstance.runEpisodes(9);
+            mcCheckpoints.push(mcInstance.getStateValues());
+            tdCheckpoints.push(tdInstance.getStateValues());
+
+            // Checkpoint 100 (or custom max episodes - run remaining)
+            const remaining = Math.max(0, config.episodes - 10);
+            if (remaining > 0) {
+                mcInstance.runEpisodes(remaining);
+                tdInstance.runEpisodes(remaining);
+            }
+            mcCheckpoints.push(mcInstance.getStateValues());
+            tdCheckpoints.push(tdInstance.getStateValues());
+
+            // 2. Get RMS Curves over episode ranges averaged over runs
+            const mcRmsErrors = new Array(config.episodes).fill(0);
+            const tdRmsErrors = new Array(config.episodes).fill(0);
+
+            for (let r = 0; r < config.runs; r++) {
+                mcInstance.reset();
+                tdInstance.reset();
+
+                for (let e = 0; e < config.episodes; e++) {
+                    mcInstance.runEpisodes(1);
+                    const mcVals = stateKeys.map(s => mcInstance.getStateValues()[s]);
+                    mcRmsErrors[e] += rmsError(realValues, mcVals);
+
+                    tdInstance.runEpisodes(1);
+                    const tdVals = stateKeys.map(s => tdInstance.getStateValues()[s]);
+                    tdRmsErrors[e] += rmsError(realValues, tdVals);
+                }
+            }
+
+            // Average the RMS errors
+            for (let e = 0; e < config.episodes; e++) {
+                mcRmsErrors[e] /= config.runs;
+                tdRmsErrors[e] /= config.runs;
+            }
+
+            const endCpu = performance.now();
+
+            // Update DOM metrics
+            document.getElementById('cpu-time').textContent = `${(endCpu - startCpu).toFixed(1)} ms`;
+            document.getElementById('mc-final-rms').textContent = mcRmsErrors[mcRmsErrors.length - 1].toFixed(4);
+            document.getElementById('td-final-rms').textContent = tdRmsErrors[tdRmsErrors.length - 1].toFixed(4);
+
+            updateVisualizerValues(config.activeTab === 'mc' ? mcCheckpoints[3] : tdCheckpoints[3]);
+            updateCharts(mcCheckpoints, tdCheckpoints, mcRmsErrors, tdRmsErrors);
+        }
+
+        // --- Visualizer Update ---
+        function updateVisualizerValues(stateValues) {
+            stateKeys.forEach(state => {
+                const nodeValSpan = document.querySelector(`#node-${state} .node-val`);
+                if (nodeValSpan) {
+                    nodeValSpan.textContent = stateValues[state].toFixed(2);
+                }
+            });
+        }
+
+        // --- Chart rendering/updating logic ---
+        function initCharts() {
+            const ctxEst = document.getElementById('estimationChart').getContext('2d');
+            estimationChart = new Chart(ctxEst, {
+                type: 'line',
+                data: {
+                    labels: ['A', 'B', 'C', 'D', 'E'],
+                    datasets: [
+                        {
+                            label: 'True Values',
+                            data: realValues,
+                            borderColor: '#94a3b8',
+                            borderWidth: 2.5,
+                            borderDash: [5, 5],
+                            pointBackgroundColor: '#94a3b8',
+                            fill: false,
+                            tension: 0
+                        },
+                        {
+                            label: '0 Episodes',
+                            data: [0.5, 0.5, 0.5, 0.5, 0.5],
+                            borderColor: '#a855f7',
+                            borderWidth: 1.5,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: '1 Episode',
+                            data: [0.5, 0.5, 0.5, 0.5, 0.5],
+                            borderColor: '#f59e0b',
+                            borderWidth: 1.5,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: '10 Episodes',
+                            data: [0.5, 0.5, 0.5, 0.5, 0.5],
+                            borderColor: '#3b82f6',
+                            borderWidth: 1.5,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: '100 Episodes',
+                            data: [0.5, 0.5, 0.5, 0.5, 0.5],
+                            borderColor: '#06b6d4',
+                            borderWidth: 2.5,
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 1,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#f8fafc', font: { family: 'Outfit' } } }
+                    }
+                }
+            });
+
+            const ctxRms = document.getElementById('rmsChart').getContext('2d');
+            rmsChart = new Chart(ctxRms, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: config.episodes}, (_, i) => i + 1),
+                    datasets: [
+                        {
+                            label: 'Monte Carlo',
+                            data: [],
+                            borderColor: '#06b6d4',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            label: 'TD(0)',
+                            data: [],
+                            borderColor: '#a855f7',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 0.35,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Episodes', color: '#94a3b8' },
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8', maxTicksLimit: 10 }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#f8fafc', font: { family: 'Outfit' } } }
+                    }
+                }
+            });
+        }
+
+        function updateCharts(mcCheckpoints, tdCheckpoints, mcRmsErrors, tdRmsErrors) {
+            const activeCheckpoints = config.activeTab === 'mc' ? mcCheckpoints : tdCheckpoints;
+            
+            // Update checkpoints dataset values
+            for (let i = 0; i < 4; i++) {
+                estimationChart.data.datasets[i+1].data = stateKeys.map(s => activeCheckpoints[i][s]);
+            }
+            // Update checkpoint label names dynamically
+            estimationChart.data.datasets[4].label = `${config.episodes} Episodes`;
+            estimationChart.update();
+
+            // Update RMS Chart datasets
+            rmsChart.data.labels = Array.from({length: config.episodes}, (_, i) => i + 1);
+            rmsChart.data.datasets[0].data = mcRmsErrors;
+            rmsChart.data.datasets[1].data = tdRmsErrors;
+            rmsChart.update();
+        }
+
+        // --- Single Step Random Walk Animation logic ---
+        function resetWalkVisualization() {
+            if (walkTimer) clearInterval(walkTimer);
+            walkSim.reset();
+            
+            document.querySelectorAll('.mrp-node').forEach(node => {
+                node.classList.remove('active', 'active-walk');
+            });
+            document.getElementById('node-3').classList.add('active');
+            
+            const badge = document.getElementById('walk-status');
+            badge.style.display = 'none';
+        }
+
+        function stepWalk() {
+            if (walkSim.inTerminal()) {
+                resetWalkVisualization();
+            }
+            
+            const prevNode = document.getElementById(`node-${walkSim.getCurrentState()}`);
+            if (prevNode) prevNode.classList.remove('active', 'active-walk');
+
+            const { nextState, reward } = walkSim.step();
+            const nextNode = document.getElementById(`node-${nextState}`);
+            
+            if (nextNode) {
+                nextNode.classList.add('active-walk');
+            }
+
+            const badge = document.getElementById('walk-status');
+            badge.style.display = 'inline-flex';
+            if (walkSim.inTerminal()) {
+                badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Terminal! Reward +${reward}`;
+            } else {
+                badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Walking... Reward +${reward}`;
+            }
+        }
+
+        // --- Debouncer Helper ---
+        let debounceTimer;
+        function debounce(func, delay = 120) {
+            return function(...args) {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
+        // --- Setup Event Listeners ---
+        function setupEventListeners() {
+            const sliders = [
+                { id: 'alpha-slider', valId: 'alpha-val', configKey: 'alpha', parser: parseFloat },
+                { id: 'gamma-slider', valId: 'gamma-val', configKey: 'gamma', parser: parseFloat },
+                { id: 'episodes-slider', valId: 'episodes-val', configKey: 'episodes', parser: parseInt },
+                { id: 'runs-slider', valId: 'runs-val', configKey: 'runs', parser: parseInt }
+            ];
+
+            const runDebounced = debounce(runSimulations, 150);
+
+            sliders.forEach(slider => {
+                const sliderEl = document.getElementById(slider.id);
+                const valueEl = document.getElementById(slider.valId);
+
+                sliderEl.addEventListener('input', (e) => {
+                    const val = slider.parser(e.target.value);
+                    config[slider.configKey] = val;
+                    valueEl.textContent = val.toFixed(slider.parser === parseFloat ? 2 : 0);
+                    runDebounced();
+                });
+            });
+
+            // Tabs toggle
+            document.getElementById('tab-mc').addEventListener('click', (e) => {
+                document.getElementById('tab-mc').classList.add('active');
+                document.getElementById('tab-td').classList.remove('active');
+                config.activeTab = 'mc';
+                runSimulations();
+            });
+
+            document.getElementById('tab-td').addEventListener('click', (e) => {
+                document.getElementById('tab-td').classList.add('active');
+                document.getElementById('tab-mc').classList.remove('active');
+                config.activeTab = 'td';
+                runSimulations();
+            });
+
+            // Run Simulation Manual Button
+            document.getElementById('btn-run').addEventListener('click', () => {
+                runSimulations();
+            });
+
+            // Reset Hyperparameters Button
+            document.getElementById('btn-reset').addEventListener('click', () => {
+                document.getElementById('alpha-slider').value = 0.10;
+                document.getElementById('alpha-val').textContent = "0.10";
+                config.alpha = 0.10;
+
+                document.getElementById('gamma-slider').value = 1.00;
+                document.getElementById('gamma-val').textContent = "1.00";
+                config.gamma = 1.00;
+
+                document.getElementById('episodes-slider').value = 100;
+                document.getElementById('episodes-val').textContent = "100";
+                config.episodes = 100;
+
+                document.getElementById('runs-slider').value = 100;
+                document.getElementById('runs-val').textContent = "100";
+                config.runs = 100;
+
+                runSimulations();
+            });
+
+            // Visualizer Single Walk Walk buttons
+            document.getElementById('btn-walk-step').addEventListener('click', stepWalk);
+            document.getElementById('btn-walk-reset').addEventListener('click', resetWalkVisualization);
+        }
+
+        // Initialize dashboard on load
+        window.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            setupEventListeners();
+            runSimulations();
+        });
+    </script>
+</body>
+</html>
