@@ -1,4 +1,7 @@
+import time
+
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider, Button, RadioButtons
 from matplotlib.animation import FuncAnimation
 from scipy.optimize import linear_sum_assignment
 import numpy as np
@@ -12,8 +15,10 @@ running = False
 g = 9.81
 # time steps for simulation
 delta_t = 0.01
+delta_t_pending = delta_t
 # Amount of balls in the simulation
-n = 5
+n = 1
+n_pending = n
 # drop out for sensor
 drop_out_rate = 0.6
 # add random noise to transition model (wind, etc.)
@@ -24,6 +29,21 @@ delta_val = 0.5
 epsilon_particle = 0.5
 # number of particles
 particle_amount= 1000
+
+q = None
+A = None
+B = None
+a = None
+C = None
+xs = None
+ys = None
+meas_x = None
+meas_y = None
+particles = None
+weights = None
+lines = []
+balls = []
+vel_arrows = []
 
 # Transition model
 def calc_tran_model(delta_t, g, n):
@@ -83,12 +103,6 @@ def generate_balls(n):
         q.extend([x, y, v_x, v_y])
     return np.array(q).reshape(-1,1)
 
-# initial positions and velocity
-q = generate_balls(n)
-
-A, B, a = calc_tran_model(delta_t, g, n)
-C = calc_obs_model(n)
-
 # calc new state using transition model
 def get_new_state(q, A, B, a, n, epsilon_val=epsilon_val):
     epsilon = generate_epsilon(epsilon_val,n)
@@ -109,34 +123,6 @@ def get_new_state(q, A, B, a, n, epsilon_val=epsilon_val):
 def get_observation(q, C, n, delta_val=delta_val):
     delta = generate_delta(delta_val, n)
     return C @ q + delta
-
-xs = [[] for _ in range(n)]
-ys = [[] for _ in range(n)]
-meas_x = [[] for _ in range(n)]
-meas_y = [[] for _ in range(n)]
-
-fig, ax = plt.subplots()
-
-ax.set_xlim(0, 90)
-ax.set_ylim(0, 90)
-
-lines = []
-balls = []
-
-particle_plot, = ax.plot([], [], 'k.', alpha=0.3, markersize=2, zorder=1)
-
-for i in range(n):
-    line, = ax.plot([],[], 'b-')
-    lines.append(line)
-    ball, = ax.plot([], [], 'go', markersize=10, zorder=3)
-    x = q[i*4]
-    y = q[i*4+1]
-    ball.set_data(x, y)
-    balls.append(ball)
-
-
-particle_plot, = ax.plot([], [], 'k.', alpha=0.3, markersize=2)
-meas_plot, = ax.plot([],[], 'rx', markersize=6)
 
 # ---- Particle filter: Condensation Algorithm ----
 
@@ -236,12 +222,138 @@ def evaluate_particles(particles, observation, n):
 
     return new_weights.reshape(-1, 1)
 
+def reset_simulation():
+    global q, A, B, a, C, xs, ys, meas_x, meas_y, particles, weights, lines, balls
+    global balls, lines, vel_arrows, ani, running
 
-particles, weights = get_particles(particle_amount, n)
+    if 'ani' in globals():
+        ani.pause()
+        running = False
+
+
+    # initial positions and velocity
+    q = generate_balls(n)
+
+    A, B, a = calc_tran_model(delta_t, g, n)
+    C = calc_obs_model(n)
+
+    xs = [[] for _ in range(n)]
+    ys = [[] for _ in range(n)]
+    meas_x = [[] for _ in range(n)]
+    meas_y = [[] for _ in range(n)]
+
+    for l in lines:
+        l.remove()
+    for b in balls:
+        b.remove()
+    for arrow in vel_arrows:
+        arrow.remove()
+
+    balls = []
+    lines = []
+    vel_arrows = []
+
+    particles, weights = get_particles(particle_amount, n)
+
+    for i in range(n):
+        line, = ax.plot([], [], 'b-')
+        ball, = ax.plot([], [], 'go', markersize=10, zorder=3)
+        arrow = ax.quiver(q[i*4], q[i*4+1], q[i*4+2], q[i*4+3], color='r', zorder=4)
+        ball.set_data([q[i*4]], [q[i*4+1]])
+        balls.append(ball)
+        lines.append(line)
+        vel_arrows.append(arrow)
+
+    particle_plot.set_data([], [])
+    meas_plot.set_data([], [])
+
+    fig.canvas.draw()
+    fig.canvas.flush_events()
+
+fig, ax = plt.subplots()
+
+plt.subplots_adjust(bottom=0.2)
+
+ax.set_xlim(0, 90)
+ax.set_ylim(0, 90)
+
+ax_balls = plt.axes((0.2, 0.1, 0.5, 0.03))
+ax_time_step = plt.axes((0.2, 0.05, 0.5, 0.03))
+ax_start = plt.axes((0.8, 0.1, 0.15, 0.04))
+ax_reset = plt.axes((0.8, 0.05, 0.15,0.04))
+
+ball_slider = Slider(
+    ax_balls,
+    "Amount of balls",
+    1,
+    10,
+    valinit=1,
+    valstep=1
+)
+
+time_step_slider = Slider(
+    ax_time_step,
+    "Time step",
+    valmin= 0.01,
+    valmax= 1,
+    valinit=0.01,
+    valstep=0.01
+)
+
+reset_button = Button(
+    ax_reset,
+    "Reset"
+)
+
+start_button = Button(
+    ax_start,
+    "Start"
+)
+
+def update_balls(value):
+    global n_pending
+    n_pending = int(value)
+
+def update_time_step(value):
+    global delta_t_pending
+    delta_t_pending = float(value)
+
+def start(event):
+    global running
+    if running:
+        ani.pause()
+        start_button.label.set_text("Start")
+        fig.canvas.draw_idle()
+    else:
+        ani.resume()
+        start_button.label.set_text("Pause")
+        fig.canvas.draw_idle()
+    running = not running
+
+def reset(event):
+    global n, n_pending, delta_t, delta_t_pending
+
+    n = n_pending
+    delta_t = delta_t_pending
+    start_button.label.set_text("Start")
+    fig.canvas.draw_idle()
+    reset_simulation()
+
+
+ball_slider.on_changed(update_balls)
+time_step_slider.on_changed(update_time_step)
+start_button.on_clicked(start)
+reset_button.on_clicked(reset)
+
+particle_plot, = ax.plot([], [], 'k.', alpha=0.3, markersize=2, zorder=1)
+meas_plot, = ax.plot([],[], 'rx', markersize=6)
+
+reset_simulation()
 
 
 def update(frame):
     global q, weights, particles
+    global vel_arrows
 
     landed = True
 
@@ -253,6 +365,11 @@ def update(frame):
     if landed or not running:
       ani.pause()
       return lines + balls
+
+    # remove arrows
+    for arrow in vel_arrows:
+        arrow.remove()
+    vel_arrows = []
 
     # simulation
     q = get_new_state(q, A, B, a, n)
@@ -302,8 +419,12 @@ def on_key(event):
      if event.key == " ":
         if running:
             ani.pause()
+            start_button.label.set_text("Start")
+            fig.canvas.draw_idle()
         else:
             ani.resume()
+            start_button.label.set_text("Pause")
+            fig.canvas.draw_idle()
         running = not running
 
 fig.canvas.mpl_connect('key_press_event', on_key)
