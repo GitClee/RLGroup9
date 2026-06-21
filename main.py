@@ -1,5 +1,3 @@
-import time
-
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button, RadioButtons
 from matplotlib.animation import FuncAnimation
@@ -20,15 +18,19 @@ delta_t_pending = delta_t
 n = 1
 n_pending = n
 # drop out for sensor
-drop_out_rate = 0.6
+drop_out_rate = 0.5
+drop_out_pending = drop_out_rate
 # add random noise to transition model (wind, etc.)
 epsilon_val = 0.00
+epsilon_val_pending = epsilon_val
 # add random noise to observation model (noise from sensor)
 delta_val = 0.5
 # uncertainty value for particle filter
 epsilon_particle = 0.5
+epsilon_particle_pending = epsilon_particle
 # number of particles
 particle_amount= 1000
+particle_amount_pending = particle_amount
 
 q = None
 A = None
@@ -272,15 +274,18 @@ def reset_simulation():
 
 fig, ax = plt.subplots()
 
-plt.subplots_adjust(bottom=0.2)
+plt.subplots_adjust(bottom=0.3)
+plt.grid
 
 ax.set_xlim(0, 90)
 ax.set_ylim(0, 90)
 
-ax_balls = plt.axes((0.2, 0.1, 0.5, 0.03))
-ax_time_step = plt.axes((0.2, 0.05, 0.5, 0.03))
-ax_start = plt.axes((0.8, 0.1, 0.15, 0.04))
-ax_reset = plt.axes((0.8, 0.05, 0.15,0.04))
+ax_balls = plt.axes((0.2, 0.15, 0.5, 0.03))
+ax_time_step = plt.axes((0.2, 0.1, 0.5, 0.03))
+ax_dropout = plt.axes((0.2, 0, 0.5, 0.03))
+ax_epsilon_particles = plt.axes((0.2, 0.05, 0.5, 0.03))
+ax_start = plt.axes((0.8, 0.15, 0.15, 0.04))
+ax_reset = plt.axes((0.8, 0.1, 0.15,0.04))
 
 ball_slider = Slider(
     ax_balls,
@@ -297,6 +302,24 @@ time_step_slider = Slider(
     valmin= 0.01,
     valmax= 1,
     valinit=0.01,
+    valstep=0.01
+)
+
+drop_out_slider = Slider(
+    ax_epsilon_particles,
+    "Sensor dropout",
+    valmin=0,
+    valmax=0.99,
+    valinit=0.5,
+    valstep=0.01
+)
+
+epsilon_particle_slider = Slider(
+    ax_dropout,
+    "Filter uncertainty",
+    valmin=0,
+    valmax=1,
+    valinit=0.5,
     valstep=0.01
 )
 
@@ -318,6 +341,14 @@ def update_time_step(value):
     global delta_t_pending
     delta_t_pending = float(value)
 
+def update_dropout(value):
+    global drop_out_pending
+    drop_out_pending = float(value)
+
+def update_epsilon_particles(value):
+    global epsilon_particle_pending
+    epsilon_particle_pending = float(value)
+
 def start(event):
     global running
     if running:
@@ -331,10 +362,13 @@ def start(event):
     running = not running
 
 def reset(event):
-    global n, n_pending, delta_t, delta_t_pending
+    global n, n_pending, delta_t, delta_t_pending, drop_out_rate, drop_out_pending
+    global epsilon_particle_pending, epsilon_particle
 
     n = n_pending
     delta_t = delta_t_pending
+    drop_out_rate = drop_out_pending
+    epsilon_particle = epsilon_particle_pending
     start_button.label.set_text("Start")
     fig.canvas.draw_idle()
     reset_simulation()
@@ -342,6 +376,8 @@ def reset(event):
 
 ball_slider.on_changed(update_balls)
 time_step_slider.on_changed(update_time_step)
+drop_out_slider.on_changed(update_dropout)
+epsilon_particle_slider.on_changed(update_epsilon_particles)
 start_button.on_clicked(start)
 reset_button.on_clicked(reset)
 
