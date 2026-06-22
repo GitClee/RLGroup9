@@ -25,6 +25,7 @@ epsilon_val = 0.00
 epsilon_val_pending = epsilon_val
 # add random noise to observation model (noise from sensor)
 delta_val = 0.5
+delta_val_pending = delta_val
 # uncertainty value for particle filter
 epsilon_particle = 0.5
 epsilon_particle_pending = epsilon_particle
@@ -106,7 +107,7 @@ def generate_balls(n):
     return np.array(q).reshape(-1,1)
 
 # calc new state using transition model
-def get_new_state(q, A, B, a, n, epsilon_val=epsilon_val):
+def get_new_state(q, A, B, a, n, epsilon_val):
     epsilon = generate_epsilon(epsilon_val,n)
     next_state = A @ q + B @ a + epsilon
 
@@ -122,7 +123,7 @@ def get_new_state(q, A, B, a, n, epsilon_val=epsilon_val):
     return next_state
 
 # calc observation
-def get_observation(q, C, n, delta_val=delta_val):
+def get_observation(q, C, n, delta_val):
     delta = generate_delta(delta_val, n)
     return C @ q + delta
 
@@ -220,7 +221,7 @@ def evaluate_particles(particles, observation, n):
 
         new_weights[p] = mult * np.exp(-1/2 * error)
 
-    new_weights /= np.sum(new_weights)
+    new_weights /= (np.sum(new_weights) + 1e-12) # prevent division by 0
 
     return new_weights.reshape(-1, 1)
 
@@ -272,20 +273,23 @@ def reset_simulation():
     fig.canvas.draw()
     fig.canvas.flush_events()
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(8, 6))
 
-plt.subplots_adjust(bottom=0.3)
-plt.grid
+plt.subplots_adjust(bottom=0.4)
+plt.grid()
 
-ax.set_xlim(0, 90)
-ax.set_ylim(0, 90)
+ax.set_xlim(-50, 100)
+ax.set_ylim(0, 100)
 
-ax_balls = plt.axes((0.2, 0.15, 0.5, 0.03))
-ax_time_step = plt.axes((0.2, 0.1, 0.5, 0.03))
-ax_dropout = plt.axes((0.2, 0, 0.5, 0.03))
-ax_epsilon_particles = plt.axes((0.2, 0.05, 0.5, 0.03))
-ax_start = plt.axes((0.8, 0.15, 0.15, 0.04))
-ax_reset = plt.axes((0.8, 0.1, 0.15,0.04))
+ax_balls = plt.axes((0.2, 0.3, 0.5, 0.03))
+ax_time_step = plt.axes((0.2, 0.25, 0.5, 0.03))
+ax_dropout = plt.axes((0.2, 0.2, 0.5, 0.03))
+ax_epsilon_particles = plt.axes((0.2, 0.15, 0.5, 0.03))
+ax_particle_amount = plt.axes((0.2, 0.1, 0.5, 0.03))
+ax_noise_transition = plt.axes((0.2, 0.05, 0.5, 0.03))
+ax_noise_observation = plt.axes((0.2, 0, 0.5, 0.03))
+ax_start = plt.axes((0.8, 0.3, 0.15, 0.04))
+ax_reset = plt.axes((0.8, 0.25, 0.15,0.04))
 
 ball_slider = Slider(
     ax_balls,
@@ -323,6 +327,34 @@ epsilon_particle_slider = Slider(
     valstep=0.01
 )
 
+particle_amount_slider = Slider(
+    ax_particle_amount,
+    "Amount of particles",
+    valmin=1,
+    valmax=2000,
+    valinit=1000,
+    valstep=1.0
+)
+
+noise_transition_slider = Slider(
+    ax_noise_transition,
+    "Environmental noise",
+    valmin=0,
+    valmax=1,
+    valinit=0,
+    valstep=0.01
+)
+
+noise_observation_slider = Slider(
+    ax_noise_observation,
+    "Sensor noise",
+    valmin=0,
+    valmax=3,
+    valinit=0.5,
+    valstep=0.01
+)
+
+
 reset_button = Button(
     ax_reset,
     "Reset"
@@ -349,6 +381,18 @@ def update_epsilon_particles(value):
     global epsilon_particle_pending
     epsilon_particle_pending = float(value)
 
+def update_particle_amount(value):
+    global particle_amount_pending
+    particle_amount_pending = int(value)
+
+def update_noise_transition(value):
+    global epsilon_val_pending
+    epsilon_val_pending = float(value)
+
+def update_noise_observation(value):
+    global delta_val_pending
+    delta_val_pending = float(value)
+
 def start(event):
     global running
     if running:
@@ -364,11 +408,17 @@ def start(event):
 def reset(event):
     global n, n_pending, delta_t, delta_t_pending, drop_out_rate, drop_out_pending
     global epsilon_particle_pending, epsilon_particle
+    global particle_amount, particle_amount
+    global epsilon_val_pending, epsilon_val
+    global delta_val_pending, delta_val
 
     n = n_pending
     delta_t = delta_t_pending
     drop_out_rate = drop_out_pending
     epsilon_particle = epsilon_particle_pending
+    particle_amount = particle_amount_pending
+    epsilon_val = epsilon_val_pending
+    delta_val = delta_val_pending
     start_button.label.set_text("Start")
     fig.canvas.draw_idle()
     reset_simulation()
@@ -378,6 +428,9 @@ ball_slider.on_changed(update_balls)
 time_step_slider.on_changed(update_time_step)
 drop_out_slider.on_changed(update_dropout)
 epsilon_particle_slider.on_changed(update_epsilon_particles)
+particle_amount_slider.on_changed(update_particle_amount)
+noise_transition_slider.on_changed(update_noise_transition)
+noise_observation_slider.on_changed(update_noise_observation)
 start_button.on_clicked(start)
 reset_button.on_clicked(reset)
 
@@ -408,7 +461,7 @@ def update(frame):
     vel_arrows = []
 
     # simulation
-    q = get_new_state(q, A, B, a, n)
+    q = get_new_state(q, A, B, a, n, epsilon_val)
 
     # sample and propagate particles
     particles, weights = sample_particles(particles, weights, particle_amount)
@@ -417,7 +470,7 @@ def update(frame):
     # measurement
     if np.random.rand() > drop_out_rate:
 
-        meas = get_observation(q, C, n)
+        meas = get_observation(q, C, n, delta_val)
         meas = meas.reshape(n,2)
         for i in range(n):
             meas_x[i].append(meas[i, 0])
