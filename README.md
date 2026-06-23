@@ -14,9 +14,9 @@ A Particle Filter is a sequential Monte Carlo method used to estimate the intern
 
 The algorithm (Condensation Algorithm) follows these steps:
 1. **Initialization**: We generate a set of `M` particles. Each particle represents a "guess" of the entire system state (the positions and velocities of all $n$ balls).
-2. **Propagation (Prediction)**: We move each particle forward in time using our physical transition model (gravity, velocity). We also inject process noise (`epsilon_particle`) to ensure the particles explore the state space and don't collapse into a single point.
-3. **Evaluation (Update)**: When a sensor measurement is available, we evaluate how likely each particle's guess is. Since balls are indistinguishable, we use the **Hungarian Algorithm** to find the optimal assignment between a particle's predicted ball positions and the observed measurements, minimizing the distance. Particles whose predictions closely match the observations are assigned higher weights.
-4. **Resampling**: We randomly draw a new generation of `M` particles from the current set, where particles with higher weights are more likely to be chosen. This focuses our computational effort on the most probable states.
+2. **Resampling**: We randomly draw a new generation of `M` particles from the current set, where particles with higher weights are more likely to be chosen. This focuses our computational effort on the most probable states.
+3. **Propagation (Prediction)**: We move each particle forward in time using our physical transition model (gravity, velocity). We also inject process noise (`epsilon_particle`) to ensure the particles explore the state space and don't collapse into a single point.
+4. **Evaluation (Update)**: When a sensor measurement is available, we evaluate how likely each particle's guess is. Since balls are indistinguishable, we use the **Hungarian Algorithm** to find the optimal assignment between a particle's predicted ball positions and the observed measurements, minimizing the distance. Particles whose predictions closely match the observations are assigned higher weights.
 
 ## 3. Used Libraries
 - **`numpy`**: Used for matrix operations, vector math, and random number generation (Gaussian noise, uniform initialization). It is crucial for handling the state vectors, transition matrices, and multivariate Gaussian probability calculations efficiently.
