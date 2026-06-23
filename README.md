@@ -14,9 +14,9 @@ A Particle Filter is a sequential Monte Carlo method used to estimate the intern
 
 The algorithm (Condensation Algorithm) follows these steps:
 1. **Initialization**: We generate a set of `M` particles. Each particle represents a "guess" of the entire system state (the positions and velocities of all $n$ balls).
-2. **Resampling**: We randomly draw a new generation of `M` particles from the current set, where particles with higher weights are more likely to be chosen. This focuses our computational effort on the most probable states.
-3. **Propagation (Prediction)**: We move each particle forward in time using our physical transition model (gravity, velocity). We also inject process noise (`epsilon_particle`) to ensure the particles explore the state space and don't collapse into a single point.
-4. **Evaluation (Update)**: When a sensor measurement is available, we evaluate how likely each particle's guess is. Since balls are indistinguishable, we use the **Hungarian Algorithm** to find the optimal assignment between a particle's predicted ball positions and the observed measurements, minimizing the distance. Particles whose predictions closely match the observations are assigned higher weights.
+2. **Propagation (Prediction)**: We move each particle forward in time using our physical transition model (gravity, velocity). We also inject process noise (`epsilon_particle`) to ensure the particles explore the state space and don't collapse into a single point.
+3. **Evaluation (Update)**: When a sensor measurement is available, we evaluate how likely each particle's guess is. Since balls are indistinguishable, we use the **Hungarian Algorithm** to find the optimal assignment between a particle's predicted ball positions and the observed measurements, minimizing the distance. Particles whose predictions closely match the observations are assigned higher weights.
+4. **Resampling**: We randomly draw a new generation of `M` particles from the current set, where particles with higher weights are more likely to be chosen. This focuses our computational effort on the most probable states.
 
 ## 3. Used Libraries
 - **`numpy`**: Used for matrix operations, vector math, and random number generation (Gaussian noise, uniform initialization). It is crucial for handling the state vectors, transition matrices, and multivariate Gaussian probability calculations efficiently.
@@ -111,19 +111,25 @@ Where $R$ is the sensor noise covariance matrix, and the $\text{error}$ is the m
 ## 5. Interactive Variables and Parameters
 
 ### Variables Controlled via UI Sliders
-These variables can be changed dynamically while the program is running:
-- **Amount of balls (`n`)**: 
+These variables can be changed dynamically while the program is running using the UI sliders:
+- **Amount of balls**: 
   - *What it does*: Changes the number of balls being tracked simultaneously.
   - *Behavior*: Increasing this heavily impacts performance because the state matrices grow ($4n \times 4n$) and the Hungarian algorithm has to solve an $n \times n$ matching problem for *every* particle in every frame. Visually, you will see more balls and a denser particle cloud.
-- **Time step (`delta_t`)**: 
+- **Time step**: 
   - *What it does*: Controls the discrete time interval between simulation frames.
   - *Behavior*: Increasing the time step makes the simulation run faster but causes the physics approximation to become less accurate. If it's too high, balls might clip through the ground or move erratically because the discrete steps are too large to smoothly approximate the continuous parabola.
-
-### Internal Parameters (Configurable in Code)
-If the professor asks how to tune the filter's behavior, refer to these variables at the top of the script (`main.py`):
-- **`drop_out_rate` (0.6)**: The probability (60%) that the sensor fails to provide a reading in a given frame. If increased, the particle cloud will rely entirely on its internal physics predictions for longer periods. This causes the cloud to spread out and expand as uncertainty grows, until a new measurement pulls it back together.
-- **`delta_val` (0.5)**: The noise added to the actual sensor readings. If increased, the red 'X's on the plot will scatter further away from the true green balls, requiring the filter to trust its predictions more than the raw measurements.
-- **`epsilon_particle` (0.5)**: The noise injected into the particles during propagation. 
-  - *If too low*: You risk "sample impoverishment" where particles collapse into a tiny dot and fail to explore the space, eventually losing track of the true ball if the model is slightly wrong.
-  - *If too high*: The particles scatter too quickly, leading to a highly uncertain estimation that visually looks like a giant swarm rather than a tight cluster tracking the ball.
-- **`particle_amount` (1000)**: The number of particles. Higher means better estimation accuracy and robustness, but linearly increases CPU load and decreases FPS.
+- **Sensor dropout**: 
+  - *What it does*: The probability that the sensor fails to provide a reading in a given frame.
+  - *Behavior*: If increased, the particle cloud will rely entirely on its internal physics predictions for longer periods. This causes the cloud to spread out and expand as uncertainty grows, until a new measurement pulls it back together.
+- **Filter uncertainty**: 
+  - *What it does*: The noise injected into the particles during propagation (`epsilon_particle`). 
+  - *Behavior*: If too low, you risk "sample impoverishment" where particles collapse into a tiny dot and fail to explore the space, eventually losing track of the true ball if the model is slightly wrong. If too high, the particles scatter too quickly, leading to a highly uncertain estimation that visually looks like a giant swarm.
+- **Amount of particles**: 
+  - *What it does*: The number of particles simulating the hypotheses.
+  - *Behavior*: Higher means better estimation accuracy and robustness, but linearly increases CPU load and decreases FPS.
+- **Environmental noise**: 
+  - *What it does*: Adds random physics noise directly to the transition model (e.g., simulating random wind gusts).
+  - *Behavior*: Makes the true physical trajectory of the balls unpredictable and harder for the filter to guess based purely on math.
+- **Sensor noise**: 
+  - *What it does*: The positional error added to the actual sensor readings. 
+  - *Behavior*: If increased, the red 'X's on the plot will scatter further away from the true green balls, requiring the filter to rely less on individual measurements.
