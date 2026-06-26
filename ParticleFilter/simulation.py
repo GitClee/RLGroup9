@@ -1,6 +1,6 @@
 import numpy as np
 from models import TransitionModel, ObservationModel
-from ParticleFilter import ParticleFilter
+from particleFilter import ParticleFilter
 
 class Simulation:
 
@@ -15,6 +15,9 @@ class Simulation:
 
         self.target_amount = target_amount
         self.drop_out_rate = drop_out_rate
+        self.particle_amount = particle_amount
+        self.filter_uncertainty = filter_uncertainty
+        self.delta_t = delta_t
         self.epsilon = epsilon
         self.delta = delta
         self.q = []
@@ -34,6 +37,19 @@ class Simulation:
             v_y = np.random.uniform(-25, 25)
             state.extend([x, y, v_x, v_y])
         self.q = np.array(state).reshape(-1, 1)
+
+    # add specific ball
+    def add_ball(self, x, y, v_x, v_y):
+        ball = np.array([x, y, v_x, v_y]).reshape(-1, 1)
+        self.q = np.vstack((self.q, ball))
+        self.target_amount += 1
+
+        # reset transition and observation model
+        self.trans_model = TransitionModel(self.delta_t, self.target_amount)
+        self.obs_model = ObservationModel(self.target_amount)
+
+        self.particle_filter = ParticleFilter(self.particle_amount, self.target_amount, self.filter_uncertainty)
+        self.particle_filter.initialise_particles()
 
     def step(self):
         self.q = self.trans_model.get_new_state(self.q, self.epsilon)

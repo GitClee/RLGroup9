@@ -9,7 +9,14 @@ Key features include:
 - A Particle Filter that estimates the state (position and velocity) of all $n$ balls despite the balls being indistinguishable from the sensor's perspective.
 - An interactive visualization using `matplotlib`, allowing real-time parameter changes and visual tracking of the true states, noisy measurements, and the estimated particle cloud.
 
-## 2. Explanation of the Particle Filter
+## 2. How to run
+To start this program, run the *main.py* file.
+In the simulation window, press the *Start* button to start the simulation. 
+Variables can be adjusted using the sliders at the bottom of the window. To apply the value changes, press the *Reset* button.
+Ball positions and velocities are randomized with each reset.
+To add specific ball positions and velocities, enter the values in the corresponding text boxes and press the *Add* Button.
+
+## 3. Explanation of the Particle Filter
 A Particle Filter is a sequential Monte Carlo method used to estimate the internal state of a dynamic system from noisy partial observations. In this problem, it is used because the relationship between the measurements and the states is subject to uncertainty, and the indistinguishability of the balls creates a highly non-linear, multimodal probability distribution.
 
 The algorithm (Condensation Algorithm) follows these steps:
@@ -19,13 +26,13 @@ The algorithm (Condensation Algorithm) follows these steps:
 4. **Evaluation (Update)**: When a sensor measurement is available, we evaluate how likely each particle's guess is. Since balls are indistinguishable, we use the **Hungarian Algorithm** to find the optimal assignment between a particle's predicted ball positions and the observed measurements, minimizing the distance. Particles whose predictions closely match the observations are assigned higher weights.
 
 
-## 3. Used Libraries
+## 4. Used Libraries
 - **`numpy`**: Used for matrix operations, vector math, and random number generation (Gaussian noise, uniform initialization). It is crucial for handling the state vectors, transition matrices, and multivariate Gaussian probability calculations efficiently.
 - **`scipy.optimize` (`linear_sum_assignment`)**: Used to solve the Assignment Problem (Hungarian Algorithm). It finds the optimal one-to-one matching between the indistinguishable predicted balls and the sensor observations to minimize the total assignment cost (distance).
 - **`matplotlib.pyplot` & `matplotlib.animation` (`FuncAnimation`)**: Used to render the 2D visualization and animate the simulation in real-time.
 - **`matplotlib.widgets` (`Slider`, `Button`, `RadioButtons`)**: Used to create the interactive UI elements (sliders for balls and time steps, buttons for start/pause/reset).
 
-## 4. Formulas and Matrices
+## 5. Formulas and Matrices
 
 ### State Vector
 For $n$ balls, the state vector $q$ is a $4n \times 1$ column vector. For a single ball $i$, the state is:
@@ -109,7 +116,7 @@ $$
 
 Where $R$ is the sensor noise covariance matrix, and the $\text{error}$ is the minimized Mahalanobis distance sum calculated via the Hungarian algorithm.
 
-## 5. Interactive Variables and Parameters
+## 6. Interactive Variables and Parameters
 
 ### Variables Controlled via UI Sliders
 These variables can be changed dynamically while the program is running using the UI sliders:

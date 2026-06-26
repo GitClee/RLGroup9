@@ -1,7 +1,7 @@
 from matplotlib.animation import FuncAnimation
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider, Button
+from matplotlib.widgets import Slider, Button, TextBox
 from simulation import Simulation
 import numpy as np
 from sklearn.cluster import KMeans
@@ -23,6 +23,18 @@ def reset_simulation():
     # get new simulation with updated values
     simulation = Simulation(delta_t, particle_amount, n, drop_out_rate, epsilon_val, delta_val, epsilon_particle)
     simulation.generate_balls()
+
+    reset_graph()
+
+def reset_graph():
+    global running
+    global xs, ys, meas_x, meas_y
+    global lines, vel_arrows, balls
+    global meas_plot, particle_plot, estimation_plot
+
+    if running:
+        ani.pause()
+        running = False
 
     q = simulation.get_q()
 
@@ -162,7 +174,7 @@ simulation = None
 running = False
 fig, ax = plt.subplots(figsize=(8, 6))
 
-plt.subplots_adjust(bottom=0.4)
+plt.subplots_adjust(bottom=0.5)
 plt.grid()
 
 ax.set_xlim(-50, 100)
@@ -179,17 +191,26 @@ ani = FuncAnimation(fig, update, interval=10, blit=False)
 reset_simulation()
 fig.canvas.draw_idle()
 
-# Setup sliders and buttons for adjusting variables
+# Setup sliders for adjusting variables
 
-ax_balls = plt.axes((0.2, 0.3, 0.5, 0.03))
-ax_time_step = plt.axes((0.2, 0.25, 0.5, 0.03))
-ax_dropout = plt.axes((0.2, 0.2, 0.5, 0.03))
-ax_epsilon_particles = plt.axes((0.2, 0.15, 0.5, 0.03))
-ax_particle_amount = plt.axes((0.2, 0.1, 0.5, 0.03))
-ax_noise_transition = plt.axes((0.2, 0.05, 0.5, 0.03))
-ax_noise_observation = plt.axes((0.2, 0, 0.5, 0.03))
-ax_start = plt.axes((0.8, 0.3, 0.15, 0.04))
-ax_reset = plt.axes((0.8, 0.25, 0.15,0.04))
+ax_balls = plt.axes((0.2, 0.4, 0.5, 0.03))
+ax_time_step = plt.axes((0.2, 0.35, 0.5, 0.03))
+ax_dropout = plt.axes((0.2, 0.3, 0.5, 0.03))
+ax_epsilon_particles = plt.axes((0.2, 0.25, 0.5, 0.03))
+ax_particle_amount = plt.axes((0.2, 0.2, 0.5, 0.03))
+ax_noise_transition = plt.axes((0.2, 0.15, 0.5, 0.03))
+ax_noise_observation = plt.axes((0.2, 0.1, 0.5, 0.03))
+
+# Setup Textboxes
+ax_x = plt.axes((0.82, 0.3, 0.15, 0.04))
+ax_y = plt.axes((0.82, 0.25, 0.15, 0.04))
+ax_v_x = plt.axes((0.82, 0.2, 0.15, 0.04))
+ax_v_y = plt.axes((0.82, 0.15, 0.15, 0.04))
+
+# Setup Buttons
+ax_start = plt.axes((0.82, 0.4, 0.15, 0.04))
+ax_reset = plt.axes((0.82, 0.35, 0.15,0.04))
+ax_add = plt.axes((0.82, 0.1, 0.15, 0.04))
 
 ball_slider = Slider(ax_balls,"Amount of balls",1,10,
                      valinit=n, valstep=1)
@@ -206,8 +227,14 @@ noise_transition_slider = Slider(ax_noise_transition,"Environmental noise",0,1,
 noise_observation_slider = Slider(ax_noise_observation,"Sensor noise",0,3,
                                 valinit=delta_val, valstep=0.01)
 
+x_box = TextBox(ax_x, "x: ")
+y_box = TextBox(ax_y, "y: ")
+v_x_box = TextBox(ax_v_x, "v_x: ")
+v_y_box = TextBox(ax_v_y, "v_y: ")
+
 reset_button = Button(ax_reset,"Reset")
 start_button = Button(ax_start,"Start")
+add_button = Button(ax_add,"Add")
 
 # functions called by sliders
 def update_balls(value):
@@ -267,12 +294,30 @@ def reset(event):
 
     reset_simulation()
 
+def add_ball(event):
+    global n, simulation
+    try:
+        x = int(x_box.text)
+        y = int(y_box.text)
+        v_x = int(v_x_box.text)
+        v_y = int(v_y_box.text)
+
+        n += 1
+        if n <= 10:
+            ball_slider.set_val(n)
+        simulation.add_ball(x, y, v_x, v_y)
+
+        reset_graph()
+    except ValueError:
+        print("Wrong input")
+
 start_button.on_clicked(start)
 reset_button.on_clicked(reset)
+add_button.on_clicked(add_ball)
 
 # start/stop function for spacebar
 def on_key(event):
-     global running
+     global running, n
      if event.key == " ":
         if running:
             ani.pause()
